@@ -2,34 +2,33 @@
 
 namespace App\Case1\Driver;
 
-use App\Case1\Entity\User;
 use App\Case1\Interfaces\DatabaseDriverInterface;
 use App\Case1\Interfaces\EntityInterface;
+use App\Case1\Interfaces\HydrationInterface;
 
-/**
- * Обертка над PDO или иного рога драйвер для работы с базой здесь делаем селекты апдейты инзерты и гидрацию.
- * В реальной системе гидрацию так же нужно вынести в соседний класс
- */
 class DummyDriver implements DatabaseDriverInterface
 {
-    protected array $dummyDatabase = [];
+    protected array $dummyDatabase = [
+        [
+            'id'    => 1,
+            'name'  => 'coollady1970',
+            'email' => 'coollady_1970@yahoo.com',
+        ],
+    ];
 
+    protected HydrationInterface $hydrator;
 
     public function __construct()
     {
-        $hydrated = new User();
-        $hydrated->setId(1);
-        $hydrated->setName("coollady1970");
-        $hydrated->setEmail("coollady_1970@yahoo.com");
-
-        $this->dummyDatabase[] = $hydrated;
+        $this->hydrator = new DummyHydrator();
     }
 
     public function selectBy(string $fqcn, array $condition): array
     {
         foreach ($this->dummyDatabase as $item) {
-            if ($condition['email'] === $this->dummyDatabase[0]->getEmail()) {
-                return [$item];
+            //Реальный поиск по базе выглядит не так :)
+            if ($condition['email'] === $this->dummyDatabase[0]['email']) {
+                return [$this->hydrator->hydrate($item)];
             }
         }
 
@@ -42,6 +41,21 @@ class DummyDriver implements DatabaseDriverInterface
             return null;
         }
 
-        return $this->dummyDatabase[0];
+        return $this->hydrator->hydrate($this->dummyDatabase[0]);
+    }
+
+    public function insert(EntityInterface $entity): void
+    {
+        return;
+    }
+
+    public function update(EntityInterface $entity): void
+    {
+        return;
+    }
+
+    public function getHydrator(): HydrationInterface
+    {
+        return $this->hydrator;
     }
 }

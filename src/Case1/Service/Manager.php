@@ -80,14 +80,14 @@ class Manager
             foreach ($entities as $vid => $entity) {
                 if ($vid < 0) {
                     try {
-                        //делаем insert
+                        $this->driver->insert($entity);
                     } catch (UniqueDatabaseException $uniqueNaiveEntityException) {
                         //какая-либо дополнительная логика
                         throw new ManagerException("Unique constraint violation", 10000);
                     }
                 } else {
                     try {
-                        //делаем update
+                        $this->driver->update($entity);
                     } catch (UniqueDatabaseException $uniqueNaiveEntityException) {
                         //какая-либо дополнительная логика
                         throw new ManagerException("Unique constraint violation", 10000);
@@ -95,7 +95,7 @@ class Manager
                 }
 
                 // здесь мы должны получить Log разницы через diff и что-то с ним сделать, записать в БД или в elastic
-                // или еще куда-то
+                // или еще куда-то, развивать дальше это можно бесконечно
             }
         }
 
@@ -117,7 +117,6 @@ class Manager
 
     /**
      * @throws ManagerException
-     * @throws ValidationException
      */
     public function delete(EntityInterface $removable): void
     {
@@ -129,8 +128,8 @@ class Manager
             throw new ManagerException("Can not remove non removable entity");
         }
 
+        $this->buffer[get_class($removable)][$removable->getId()] = $removable;
         $removable->markDeleted();
-        $this->persist($removable);
     }
 
     /**
@@ -142,11 +141,11 @@ class Manager
             $entity->markUpdated();
         }
 
-        if (!$entity->getId()) {
-            if ($entity instanceof ValidationSubjectInterface) {
-                $this->validate($entity);
-            }
+        if ($entity instanceof ValidationSubjectInterface) {
+            $this->validate($entity);
+        }
 
+        if (!$entity->getId()) {
             $vid = $this->assignVirtualId();
         } else {
             $vid = $entity->getId();
